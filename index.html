@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Umbral Botánico: instalación interactiva de materias primas de perfumería. Propuesta de ejemplo por Daniel Cubero.">
+<title>Umbral Botánico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Título arriba, la figura a pantalla completa justo debajo, y tres franjas breves.
+     Look oscuro único; el carmesí sale de la propia figura. */
+  :root {
+    --ink: #120D0E;
+    --panel: #1C1517;
+    --paper: #EEEAE6;
+    --soft: #B9AEAF;
+    --line: #3A2E31;
+    --accent: #E0485F;
+    --display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --body: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--ink); color: var(--paper); font: 400 17px/1.55 var(--body); }
+
+  .pad {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .inner { max-width: 1120px; margin: 0 auto; }
+
+  .eyebrow { font: 600 12px/1.3 var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--accent); margin: 0; }
+  h1, h2 { font-family: var(--display); font-weight: 500; margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(42px, 7vw, 84px); line-height: 1; }
+  h2 { font-size: clamp(30px, 4vw, 40px); line-height: 1.1; }
+  .sub { font-family: var(--display); font-style: italic; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.15; text-wrap: balance; }
+  p { margin: 0; }
+  .lead { font-size: 19px; color: var(--soft); max-width: 36em; }
+
+  /* Cabecera */
+  header.pad { padding-block: 48px 36px; }
+  header .inner { display: flex; flex-direction: column; gap: 18px; }
+
+  /* Escenario a sangre */
+  .stage {
+    position: relative; width: 100%; height: 100svh; min-height: 520px;
+    background: var(--ink); overflow: hidden;
+    touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none;
+  }
+  .stage.drag { cursor: grabbing; }
+  .stage:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+  .stage canvas { width: 100%; height: 100%; display: block; }
+  .loading[hidden] { display: none; }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--soft); font-size: 13px; letter-spacing: .15em; text-transform: uppercase; }
+  .hint {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    color: var(--paper); pointer-events: none; transition: opacity .6s ease;
+    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, .7));
+  }
+  .gesture {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(18, 13, 14, .82); border: 2px solid var(--accent); border-radius: 999px;
+    padding: 20px 28px; animation: pulse 2.2s ease-in-out infinite;
+  }
+  .gesture .arrow { color: var(--accent); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224, 72, 95, .55); }
+    50% { box-shadow: 0 0 0 18px rgba(224, 72, 95, 0); }
+  }
+  .orbit {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(calc(100% - 32px), calc(max(100svh, 520px) - 32px)); aspect-ratio: 1;
+    pointer-events: none; transition: opacity .6s ease; overflow: visible;
+  }
+  .orbit path { stroke: var(--accent); stroke-width: 4px; }
+  .orbit .arc { stroke-dasharray: 3 2; animation: flow 1.6s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -5; } }
+  .stage.used .hint, .stage.used .orbit { opacity: 0; }
+  .gesture .hand { animation: swipe 2.2s ease-in-out infinite; }
+  @keyframes swipe {
+    0%, 100% { transform: translateX(-22px) rotate(-10deg); }
+    50% { transform: translateX(22px) rotate(8deg); }
+  }
+  .pill {
+    background: rgba(18, 13, 14, .72); border-radius: 999px; padding: 12px 22px;
+    font: 600 15px var(--body); letter-spacing: .16em; text-transform: uppercase; white-space: nowrap;
+  }
+  .hint.off { opacity: 0; }
+  .dial {
+    position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+    width: min(320px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
+    font: 500 12px var(--body); color: var(--paper); font-variant-numeric: tabular-nums; letter-spacing: .1em;
+    pointer-events: none; text-shadow: 0 1px 8px rgba(0,0,0,.6);
+  }
+  .track { flex: 1; height: 2px; background: rgba(238, 234, 230, .3); position: relative; border-radius: 2px; }
+  .knob { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translateX(-50%); }
+  .deg { width: 3.5em; text-align: right; }
+
+  /* Franjas */
+  main.pad { padding-block: 64px 56px; }
+  main .inner { display: flex; flex-direction: column; gap: 64px; }
+  .band { display: flex; flex-direction: column; gap: 28px; }
+  .band + .band { padding-top: 40px; border-top: 1px solid var(--line); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+  .item { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .num { font-family: var(--display); font-size: 40px; line-height: 1; color: var(--accent); }
+  .item h3 { margin: 0; font: 600 17px/1.3 var(--body); }
+  .item p { color: var(--soft); font-size: 15px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; font-size: 15px; color: var(--paper); background: var(--panel); }
+
+  footer { color: var(--soft); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; padding-top: 32px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 760px) {
+    header.pad { padding-block: 32px 24px; }
+    .grid3 { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hint, .orbit { transition: none; } .gesture, .gesture .hand, .orbit .arc { animation: none; } }
+</style>
+</head>
+<body>
+
+
+<header class="pad">
+  <div class="inner">
+    <p class="eyebrow">Instalación interactiva · materias primas de perfumería</p>
+    <h1>Umbral Botánico</h1>
+    <p class="sub">Antes de entrar, el visitante toca la materia prima.</p>
+    <p class="lead">En la entrada del espacio, una pantalla redonda presenta cada materia prima como una figura viva. El visitante la gira con el dedo, descubre sus facetas y entra con la nota ya en la mente.</p>
+  </div>
+</header>
+
+<div class="stage" id="stage" tabindex="0" role="img" aria-label="Figura envuelta en hojas carmesí. Arrastra o usa las flechas para girarla.">
+  <canvas id="c"></canvas>
+  <div class="loading" id="loading">Cargando</div>
+  <svg class="orbit" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path class="arc" d="M27 89.84 A46 46 0 0 0 73 89.84" vector-effect="non-scaling-stroke"/><path class="head" d="M69 89.84 L73 89.84 L71 93.3" vector-effect="non-scaling-stroke"/><path class="head" d="M31 89.84 L27 89.84 L29 93.3" vector-effect="non-scaling-stroke"/></g></svg>
+  <div class="hint" id="hint">
+    <div class="gesture" aria-hidden="true">
+      <svg class="arrow" viewBox="0 0 24 24" width="44" height="44"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="hand" viewBox="0 0 24 24" width="96" height="96"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11v-1a2 2 0 0 0-4 0"/><path d="M14 10V9a2 2 0 0 0-4 0v1"/><path d="M10 9.5V4a2 2 0 0 0-4 0v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></svg>
+      <svg class="arrow" viewBox="0 0 24 24" width="44" height="44"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <span class="pill">Desliza el dedo para girar</span>
+  </div>
+</div>
+
+<main class="pad">
+  <div class="inner">
+    <section class="band">
+      <p class="eyebrow">El recorrido</p>
+      <div class="grid3">
+        <div class="item"><span class="num">1</span><h3>Se acerca</h3><p>La figura gira sola y atrae la mirada desde el pasillo, como una estela.</p></div>
+        <div class="item"><span class="num">2</span><h3>Toca y gira</h3><p>Descubre la materia prima por todas sus facetas y lee su familia olfativa y su lugar en la pirámide.</p></div>
+        <div class="item"><span class="num">3</span><h3>Entra</h3><p>Dentro, el espacio la convierte en aroma: la nota que ha visto es la que va a sentir.</p></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <p class="eyebrow">Cómo se hace</p>
+      <h2>Una figura por materia prima, que gira bajo el dedo.</h2>
+      <p class="lead">Damos forma visual a cada materia prima, con su textura, su color y su carácter, y la mostramos en una vuelta completa. Funciona en cualquier pantalla táctil, sin conexión y sin instalar nada.</p>
+    </section>
+
+    <section class="band">
+      <p class="eyebrow">Posibilidades</p>
+      <div class="chips">
+        <span class="chip">Una figura por nota: salida, corazón y fondo</span>
+        <span class="chip">El visitante compone su propio acorde</span>
+        <span class="chip">Su elección cambia la luz del espacio</span>
+        <span class="chip">Difusión del aroma sincronizada</span>
+        <span class="chip">Fichas de familia olfativa y origen</span>
+        <span class="chip">Modo reclamo cuando nadie toca</span>
+        <span class="chip">Las figuras siguen vivas en web y redes</span>
+      </div>
+    </section>
+
+    <footer>
+      <span>Umbral Botánico · propuesta de ejemplo por Daniel Cubero</span>
+      <span>Planteamiento abierto: se adapta a la marca, las materias primas y la feria.</span>
+    </footer>
+  </div>
+</main>
+
+<script type="module">
+  import { createRotor } from './rotor.js';
+
+  const N = 96;
+  const imgs = new Array(N);
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const fig = document.createElement('canvas').getContext('2d');
+  const hint = document.getElementById('hint');
+  const loadingEl = document.getElementById('loading');
+
+  const rotor = createRotor({ frames: N, degPerPx: 0.45, idleMs: 3500, autoDegPerSec: 18 });
+  let lastDrawn = -1;
+
+  function load(i) {
+    return new Promise(res => {
+      const im = new Image();
+      im.onload = () => { imgs[i] = im; res(); };
+      im.onerror = () => res();
+      im.src = `frames/f${String(i + 1).padStart(3, '0')}.jpg`;
+    });
+  }
+  load(0).then(() => { loadingEl.hidden = true; lastDrawn = -1; });
+  for (let i = 1; i < N; i++) load(i);
+
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+    lastDrawn = -1;
+  }
+  new ResizeObserver(resize).observe(stage);
+
+  function nearestLoaded(i) {
+    for (let d = 0; d < N; d++) {
+      if (imgs[(i + d) % N]) return (i + d) % N;
+      if (imgs[(i - d + N) % N]) return (i - d + N) % N;
+    }
+    return -1;
+  }
+  // La pantalla del visitante es redonda: la figura se dibuja dentro de un círculo
+  // que ocupa todo el alto (o ancho) disponible, con un halo carmesí alrededor.
+  function draw(i) {
+    const im = imgs[i];
+    if (!im) return;
+    const W = canvas.width, H = canvas.height;
+    const dpr = W / stage.clientWidth;
+    const D = Math.min(W, H) - 32 * dpr;
+    const R = D / 2, cx = W / 2, cy = H / 2;
+    const ar = im.naturalWidth / im.naturalHeight;
+
+    ctx.clearRect(0, 0, W, H);
+    // halo
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.shadowColor = 'rgba(224, 72, 95, .35)';
+    ctx.shadowBlur = 80 * dpr;
+    ctx.fillStyle = '#1C1517';
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+    // fondo desenfocado que llena el círculo
+    let bw = D, bh = bw / ar;
+    if (bh < D) { bh = D; bw = bh * ar; }
+    ctx.filter = 'blur(30px) brightness(.45) saturate(1.3)';
+    ctx.drawImage(im, cx - bw / 2, cy - bh / 2, bw, bh);
+    ctx.filter = 'none';
+    // figura: casi a altura completa del círculo, con los laterales fundidos en el fondo
+    const fh = D * 1.12, fw = fh * ar;
+    const off = fig.canvas;
+    if (off.width !== Math.round(fw) || off.height !== Math.round(fh)) { off.width = Math.round(fw); off.height = Math.round(fh); }
+    fig.globalCompositeOperation = 'source-over';
+    fig.clearRect(0, 0, off.width, off.height);
+    fig.drawImage(im, 0, 0, off.width, off.height);
+    const g = fig.createLinearGradient(0, 0, off.width, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.14, 'rgba(0,0,0,1)');
+    g.addColorStop(.86, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    fig.globalCompositeOperation = 'destination-in';
+    fig.fillStyle = g; fig.fillRect(0, 0, off.width, off.height);
+    ctx.drawImage(off, cx - fw / 2, cy - fh / 2, fw, fh);
+    ctx.restore();
+
+    // bisel fino
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.lineWidth = 2 * dpr;
+    ctx.strokeStyle = 'rgba(238, 234, 230, .18)';
+    ctx.stroke();
+  }
+
+  let touched = false;
+  const hideHint = () => { if (!touched) { touched = true; stage.classList.add('used'); } };
+  stage.addEventListener('pointerdown', e => {
+    try { stage.setPointerCapture(e.pointerId); } catch {}
+    stage.classList.add('drag');
+    rotor.pointerDown(e.clientX, e.timeStamp);
+    hideHint();
+  });
+  stage.addEventListener('pointermove', e => rotor.pointerMove(e.clientX, e.timeStamp));
+  // el dedo vuelve a aparecer si nadie toca la pantalla en un rato
+  let hintTimer = 0;
+  const up = e => {
+    stage.classList.remove('drag'); rotor.pointerUp(e.timeStamp);
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { touched = false; stage.classList.remove('used'); }, 10000);
+  };
+  stage.addEventListener('pointerdown', () => clearTimeout(hintTimer));
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+  stage.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { rotor.angle += 360 / N * 2; hideHint(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { rotor.angle -= 360 / N * 2; hideHint(); e.preventDefault(); }
+  });
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let prev = performance.now();
+  function loop(now) {
+    const dt = now - prev; prev = now;
+    if (!(reduce && !rotor.dragging && rotor.velocity === 0)) rotor.step(dt, now);
+    const f = nearestLoaded(rotor.frame());
+    if (f >= 0 && f !== lastDrawn) { draw(f); lastDrawn = f; }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

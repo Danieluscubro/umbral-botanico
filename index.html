@@ -40,12 +40,14 @@
   .lead { font-size: 19px; color: var(--soft); max-width: 36em; }
 
   /* Cabecera */
-  header.pad { padding-block: 48px 36px; }
-  header .inner { display: flex; flex-direction: column; gap: 18px; }
+  /* Primera pantalla: solo el título y la figura */
+  .first { display: flex; flex-direction: column; height: 100svh; min-height: 560px; }
+  header.pad { padding-block: 28px 8px; }
+  header .inner { display: flex; justify-content: center; text-align: center; }
 
   /* Escenario a sangre */
   .stage {
-    position: relative; width: 100%; height: 100svh; min-height: 520px;
+    position: relative; width: 100%; flex: 1; min-height: 0;
     background: var(--ink); overflow: hidden;
     touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none;
   }
@@ -72,7 +74,7 @@
   }
   .orbit {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: min(calc(100% - 32px), calc(max(100svh, 520px) - 32px)); aspect-ratio: 1;
+    width: 0; aspect-ratio: 1;
     pointer-events: none; transition: opacity .6s ease; overflow: visible;
   }
   .orbit path { stroke: var(--accent); stroke-width: 4px; }
@@ -116,7 +118,7 @@
   footer { color: var(--soft); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; padding-top: 32px; border-top: 1px solid var(--line); }
 
   @media (max-width: 760px) {
-    header.pad { padding-block: 32px 24px; }
+    header.pad { padding-block: 20px 4px; }
     .grid3 { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   }
   @media (prefers-reduced-motion: reduce) { .hint, .orbit { transition: none; } .gesture, .gesture .hand, .orbit .arc { animation: none; } }
@@ -125,12 +127,10 @@
 <body>
 
 
+<div class="first">
 <header class="pad">
   <div class="inner">
-    <p class="eyebrow">Instalación interactiva · materias primas de perfumería</p>
     <h1>Umbral Botánico</h1>
-    <p class="sub">Antes de entrar, el visitante toca la materia prima.</p>
-    <p class="lead">En la entrada del espacio, una pantalla redonda presenta cada materia prima como una figura viva. El visitante la gira con el dedo, descubre sus facetas y entra con la nota ya en la mente.</p>
   </div>
 </header>
 
@@ -147,9 +147,16 @@
     <span class="pill">Desliza el dedo para girar</span>
   </div>
 </div>
+</div>
 
 <main class="pad">
   <div class="inner">
+    <section class="band">
+      <p class="eyebrow">Instalación interactiva · materias primas de perfumería</p>
+      <p class="sub">Antes de entrar, el visitante toca la materia prima.</p>
+      <p class="lead">En la entrada del espacio, una pantalla redonda presenta cada materia prima como una figura viva. El visitante la gira con el dedo, descubre sus facetas y entra con la nota ya en la mente.</p>
+    </section>
+
     <section class="band">
       <p class="eyebrow">El recorrido</p>
       <div class="grid3">
@@ -196,6 +203,7 @@
   const fig = document.createElement('canvas').getContext('2d');
   const hint = document.getElementById('hint');
   const loadingEl = document.getElementById('loading');
+  const orbit = stage.querySelector('.orbit');
 
   const rotor = createRotor({ frames: N, degPerPx: 0.45, idleMs: 3500, autoDegPerSec: 18 });
   let lastDrawn = -1;
@@ -216,6 +224,7 @@
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(r.width * dpr);
     canvas.height = Math.round(r.height * dpr);
+    orbit.style.width = `${Math.max(0, Math.min(r.width, r.height) - 32)}px`;
     lastDrawn = -1;
   }
   new ResizeObserver(resize).observe(stage);

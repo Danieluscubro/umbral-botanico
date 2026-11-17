@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Umbral Botánico · Túnel</title>
+<style>
+  :root { --bg:#050403; --ink:#f3e9dc; --muted:#a8998a; --accent:#c2273f; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; overflow:hidden; }
+  .stage { position:fixed; inset:0; display:grid; place-items:center; }
+  canvas#view { display:block; }
+  .label { position:fixed; left:50%; transform:translateX(-50%); text-align:center; pointer-events:none;
+    transition: opacity .6s ease; }
+  .label .name { font-size: clamp(22px, 3.2vmin, 40px); letter-spacing:.04em; }
+  .label .sci { font-size: clamp(12px, 1.6vmin, 18px); font-style:italic; color:var(--muted); margin-top:4px; }
+  .label .fam { font-size: clamp(10px, 1.25vmin, 14px); text-transform:uppercase; letter-spacing:.22em; color:var(--muted); margin-top:6px;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; }
+
+  .hint { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:18px;
+    pointer-events:none; transition: opacity .6s ease; }
+  .hint .ring { width: clamp(120px, 20vmin, 220px); aspect-ratio:1; border-radius:50%;
+    background: rgba(5,4,3,.55); border:2px solid rgba(243,233,220,.55); display:grid; place-items:center;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .hint svg { width:58%; height:58%; animation: push 2.4s ease-in-out infinite; transform-origin:50% 60%; }
+  @keyframes push { 0%,100% { transform: scale(.72); opacity:.75 } 50% { transform: scale(1.08); opacity:1 } }
+  .hint .txt { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: clamp(14px, 2vmin, 20px);
+    background: rgba(5,4,3,.7); padding:10px 18px; border-radius:999px; border:1px solid rgba(243,233,220,.25); }
+  .hidden { opacity:0 !important; }
+
+  .cam { position:fixed; left:20px; bottom:20px; display:flex; align-items:flex-end; gap:10px; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:12px; color:var(--muted); }
+  .cam .preview { position:relative; width:140px; height:105px; border-radius:12px; overflow:hidden; border:1px solid rgba(243,233,220,.2); background:#111; }
+  .cam video, .cam canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  .cam .meter { width:8px; height:105px; border-radius:4px; background:rgba(243,233,220,.12); position:relative; overflow:hidden; }
+  .cam .meter i { position:absolute; left:0; right:0; bottom:0; background:var(--accent); height:0; transition:height .08s linear; }
+  .cam .state { max-width:170px; line-height:1.4; }
+  .cam.off .preview, .cam.off .meter { display:none; }
+
+  .start { position:fixed; right:20px; bottom:20px; font:inherit; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:14px;
+    color:var(--ink); background:rgba(194,39,63,.85); border:0; border-radius:999px; padding:12px 20px; cursor:pointer; }
+  .start[hidden] { display:none; }
+  .load { position:fixed; right:20px; bottom:72px; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:13px;
+    color:var(--ink); background:rgba(243,233,220,.08); border:1px solid rgba(243,233,220,.3); border-radius:999px; padding:9px 16px; cursor:pointer; }
+  .load:hover { background:rgba(243,233,220,.16); }
+  .drop { position:fixed; inset:12px; border:2px dashed rgba(243,233,220,.6); border-radius:24px; display:grid; place-items:center;
+    background:rgba(5,4,3,.75); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:20px; pointer-events:none; }
+  .drop[hidden] { display:none; }
+  .keys { position:fixed; right:20px; top:16px; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:11px; color:#6d6257; text-align:right; line-height:1.6; }
+  .loading { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; color:var(--muted); font-size:14px; }
+  .loading[hidden] { display:none; }
+</style>
+</head>
+<body>
+<div class="stage"><canvas id="view" aria-label="Túnel de materias primas: rosa, bergamota, vainilla y sándalo"></canvas></div>
+
+<div class="label" id="label"><div class="name">Rosa</div><div class="sci">Rosa damascena</div><div class="fam">Corazón floral</div></div>
+
+<div class="hint" id="hint">
+  <div class="ring">
+    <svg viewBox="0 0 64 64" fill="none" stroke="#f3e9dc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M22 34V18a3.5 3.5 0 0 1 7 0v12"/><path d="M29 29V14a3.5 3.5 0 0 1 7 0v15"/><path d="M36 29V16a3.5 3.5 0 0 1 7 0v15"/>
+      <path d="M43 31v-8a3.5 3.5 0 0 1 7 0v15c0 9-6 16-15 16h-2c-6 0-9-3-12-7l-7-10a3.5 3.5 0 0 1 5.5-4.3L22 36"/>
+    </svg>
+  </div>
+  <div class="txt" id="hintTxt">Acerca la mano para entrar · gírala para rotar</div>
+</div>
+
+<div class="cam off" id="cam">
+  <div class="preview"><video id="video" playsinline muted></video><canvas id="dots"></canvas></div>
+  <div class="meter" title="Cercanía de la mano"><i id="meter"></i></div>
+  <div class="state" id="camState">Cámara apagada</div>
+</div>
+<button class="start" id="start">Activar cámara</button>
+<label class="load" id="loadBtn">Cargar vídeo<input type="file" id="file" accept="video/*" hidden></label>
+<div class="drop" id="drop" hidden>Suelta el vídeo aquí</div>
+<div class="keys">F · pantalla completa &nbsp; C · ocultar cámara<br>Rueda del ratón · avanzar &nbsp; ← → · rotar (sin cámara)</div>
+<div class="loading" id="loading">Cargando…</div>
+
+<script type="module">
+import { createTunnel, labelFor } from './tunnel.js';
+
+let N = 608;
+let custom = false, busy = false;
+const BOUNDS = [84, 231, 402, 563];
+const INGREDIENTS = [
+  { name: 'Rosa',      sci: 'Rosa damascena',     fam: 'Corazón floral' },
+  { name: 'Bergamota', sci: 'Citrus bergamia',    fam: 'Salida cítrica' },
+  { name: 'Vainilla',  sci: 'Vanilla planifolia', fam: 'Fondo ambarado' },
+  { name: 'Sándalo',   sci: 'Santalum album',     fam: 'Fondo amaderado' },
+];
+const names = INGREDIENTS.map(i => i.name);
+
+// ---------- fotogramas ----------
+let imgs = new Array(N);
+let loaded = 0;
+const loadingEl = document.getElementById('loading');
+for (let i = 0; i < N; i++) {
+  const im = new Image();
+  im.decoding = 'async';
+  im.onload = () => { loaded++; if (!busy && (loaded % 40 === 0 || loaded === N)) loadingEl.textContent = `Cargando ${Math.round(loaded / N * 100)} %`; if (loaded > 30 && !busy) loadingEl.hidden = true; };
+  im.src = `frames/f${String(i + 1).padStart(4, '0')}.jpg`;
+  imgs[i] = im;
+}
+function nearestLoaded(i) {
+  for (let d = 0; d < N; d++) {
+    const a = imgs[(i - d + N) % N];
+    if (a.complete && a.naturalWidth) return a;
+  }
+  return null;
+}
+
+// ---------- lienzo redondo ----------
+const view = document.getElementById('view');
+const ctx = view.getContext('2d');
+let D = 0, dpr = 1;
+const labelEl = document.getElementById('label');
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  D = Math.floor(Math.min(innerWidth, innerHeight) * 0.9);
+  view.width = D * dpr; view.height = D * dpr;
+  view.style.width = view.style.height = D + 'px';
+  labelEl.style.top = `calc(50% + ${D / 2}px - ${Math.max(70, D * 0.17)}px)`;
+}
+addEventListener('resize', resize); resize();
+
+const makeTunnel = n => createTunnel({ frames: n, gain: 750 * n / 608, idleMs: 2500, autoFps: 9 * n / 608 });
+let tunnel = makeTunnel(N);
+let shownLabel = '';
+function draw() {
+  const W = D * dpr, r = W / 2;
+  ctx.clearRect(0, 0, W, W);
+  const im = nearestLoaded(tunnel.frame());
+  ctx.save();
+  ctx.beginPath(); ctx.arc(r, r, r, 0, Math.PI * 2); ctx.clip();
+  if (im) { ctx.translate(r, r); ctx.rotate(tunnel.rotation); ctx.drawImage(im, -r, -r, W, W); ctx.setTransform(1, 0, 0, 1, 0, 0); }
+  const g = ctx.createRadialGradient(r, r, r * 0.62, r, r, r);
+  g.addColorStop(0, 'rgba(5,4,3,0)'); g.addColorStop(1, 'rgba(5,4,3,0.85)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, W);
+  ctx.restore();
+  if (custom) return;
+  const lab = labelFor(tunnel.frame(), BOUNDS, names);
+  if (lab !== shownLabel) {
+    shownLabel = lab;
+    const ing = INGREDIENTS[names.indexOf(lab)];
+    labelEl.classList.add('hidden');
+    setTimeout(() => {
+      labelEl.querySelector('.name').textContent = ing.name;
+      labelEl.querySelector('.sci').textContent = ing.sci;
+      labelEl.querySelector('.fam').textContent = ing.fam;
+      labelEl.classList.remove('hidden');
+    }, 350);
+  }
+}
+
+// ---------- indicación ----------
+const hint = document.getElementById('hint');
+let lastInteraction = -Infinity;
+function updateHint(now) {
+  const show = !tunnel.handPresent && now - lastInteraction > 4000;
+  hint.classList.toggle('hidden', !show);
+}
+
+// ---------- bucle ----------
+let prev = performance.now();
+function loop(now) {
+  const dt = Math.min(now - prev, 100); prev = now;
+  tunnel.step(dt, now);
+  draw(); updateHint(now);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---------- rueda del ratón (sin cámara) ----------
+let wheelSize = 0.3, keyAngle = 0;
+addEventListener('wheel', e => {
+  e.preventDefault();
+  const now = performance.now();
+  wheelSize += -e.deltaY * 0.0004;
+  tunnel.handUpdate(wheelSize, now, keyAngle);
+  lastInteraction = now;
+  clearTimeout(window.__wt); window.__wt = setTimeout(() => tunnel.handLost(performance.now()), 600);
+}, { passive: false });
+
+// ---------- teclas ----------
+const camBox = document.getElementById('cam');
+addEventListener('keydown', e => {
+  if (e.key === 'f' || e.key === 'F') { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const now = performance.now();
+    tunnel.handUpdate(wheelSize, now, keyAngle);
+    keyAngle += (e.key === 'ArrowRight' ? 1 : -1) * 0.12;
+    tunnel.handUpdate(wheelSize, now, keyAngle);
+    lastInteraction = now;
+    clearTimeout(window.__wt); window.__wt = setTimeout(() => tunnel.handLost(performance.now()), 600);
+  }
+  if (e.key === 'c' || e.key === 'C') camBox.style.visibility = camBox.style.visibility === 'hidden' ? '' : 'hidden';
+});
+
+// ---------- cargar cualquier vídeo ----------
+const fileInput = document.getElementById('file');
+const drop = document.getElementById('drop');
+fileInput.addEventListener('change', () => fileInput.files[0] && loadVideo(fileInput.files[0]));
+addEventListener('dragover', e => { e.preventDefault(); drop.hidden = false; });
+addEventListener('dragleave', e => { if (e.relatedTarget === null) drop.hidden = true; });
+addEventListener('drop', e => {
+  e.preventDefault(); drop.hidden = true;
+  const f = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('video/'));
+  if (f) loadVideo(f);
+});
+
+async function loadVideo(file) {
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  v.src = URL.createObjectURL(file);
+  busy = true; loadingEl.hidden = false; loadingEl.textContent = 'Leyendo vídeo…';
+  try {
+    await new Promise((ok, ko) => { v.onloadeddata = ok; v.onerror = () => ko(new Error('formato no compatible')); });
+    const dur = v.duration;
+    const fps = Math.min(15, 600 / dur);             // como mucho 600 fotogramas
+    const count = Math.max(2, Math.floor(dur * fps));
+    const S = 720;                                   // recorte cuadrado central
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const cx = c.getContext('2d');
+    const side = Math.min(v.videoWidth, v.videoHeight);
+    const sx = (v.videoWidth - side) / 2, sy = (v.videoHeight - side) / 2;
+    const out = new Array(count);
+    for (let i = 0; i < count; i++) {
+      v.currentTime = Math.min(dur - 0.01, i / fps);
+      await new Promise(ok => { v.onseeked = ok; });
+      cx.drawImage(v, sx, sy, side, side, 0, 0, S, S);
+      const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
+      const im = new Image(); im.src = URL.createObjectURL(blob); out[i] = im;
+      if (i % 10 === 0) loadingEl.textContent = `Preparando vídeo ${Math.round(i / count * 100)} %`;
+    }
+    imgs.forEach(im => im.src.startsWith('blob:') && URL.revokeObjectURL(im.src));
+    imgs = out; N = count; custom = true;
+    tunnel = makeTunnel(N);
+    labelEl.classList.add('hidden');
+    loadingEl.hidden = true;
+  } catch (err) {
+    loadingEl.textContent = 'No se pudo leer el vídeo: ' + err.message;
+    setTimeout(() => { loadingEl.hidden = true; }, 4000);
+  } finally {
+    busy = false;
+    URL.revokeObjectURL(v.src);
+  }
+}
+
+// ---------- cámara y mano ----------
+const startBtn = document.getElementById('start');
+const video = document.getElementById('video');
+const dots = document.getElementById('dots');
+const dctx = dots.getContext('2d');
+const meter = document.getElementById('meter');
+const camState = document.getElementById('camState');
+const hintTxt = document.getElementById('hintTxt');
+
+startBtn.addEventListener('click', startCamera);
+
+async function startCamera() {
+  startBtn.disabled = true;
+  camState.textContent = 'Preparando detección de mano…';
+  try {
+    const { FilesetResolver, HandLandmarker } = await import('./vendor/vision_bundle.mjs');
+    const fileset = await FilesetResolver.forVisionTasks(new URL('./vendor/wasm', location.href).href);
+    const landmarker = await HandLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: './vendor/hand_landmarker.task', delegate: 'GPU' },
+      runningMode: 'VIDEO', numHands: 1,
+    });
+    camState.textContent = 'Pidiendo permiso de cámara…';
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+    video.srcObject = stream; await video.play();
+    camBox.classList.remove('off'); startBtn.hidden = true;
+    camState.textContent = 'Cámara activa. La imagen no sale del ordenador.';
+    hintTxt.textContent = 'Acerca la mano para entrar · gírala para rotar';
+    track(landmarker);
+  } catch (err) {
+    console.error(err);
+    camState.textContent = 'No se pudo activar la cámara: ' + (err && err.name === 'NotAllowedError' ? 'permiso denegado.' : (err.message || err));
+    startBtn.disabled = false;
+  }
+}
+
+function handSize(lm) {
+  const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+  return (d(0, 9) + d(5, 17)) / 2; // muñeca–nudillo medio y anchura de palma
+}
+
+function handAngle(lm) {
+  // muñeca → nudillo medio, en la imagen sin espejo; se invierte para que coincida con el giro que ve el visitante
+  return -Math.atan2(lm[9].y - lm[0].y, lm[9].x - lm[0].x);
+}
+
+function track(landmarker) {
+  let lastVideoTime = -1, smooth = null, missing = 0, sc = null, ss = null;
+  function tick() {
+    const now = performance.now();
+    if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+      lastVideoTime = video.currentTime;
+      const res = landmarker.detectForVideo(video, now);
+      dots.width = dots.clientWidth; dots.height = dots.clientHeight;
+      dctx.clearRect(0, 0, dots.width, dots.height);
+      const lm = res.landmarks && res.landmarks[0];
+      if (lm) {
+        missing = 0;
+        const s = handSize(lm);
+        smooth = smooth === null ? s : smooth + (s - smooth) * 0.35;
+        const a = handAngle(lm);
+        sc = sc === null ? Math.cos(a) : sc + (Math.cos(a) - sc) * 0.35;
+        ss = ss === null ? Math.sin(a) : ss + (Math.sin(a) - ss) * 0.35;
+        tunnel.handUpdate(smooth, now, Math.atan2(ss, sc));
+        lastInteraction = now;
+        meter.style.height = Math.max(0, Math.min(1, (smooth - 0.08) / 0.3)) * 100 + '%';
+        dctx.fillStyle = '#c2273f';
+        for (const p of lm) { dctx.beginPath(); dctx.arc(p.x * dots.width, p.y * dots.height, 2.2, 0, 7); dctx.fill(); }
+      } else if (++missing > 8) {
+        if (tunnel.handPresent) tunnel.handLost(now);
+        smooth = null; sc = ss = null; meter.style.height = '0%';
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+</script>
+</body>
+</html>
